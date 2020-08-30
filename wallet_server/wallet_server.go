@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"html/template"
 	"io"
 	"log"
-	"myBlockchain/block"
 	"myBlockchain/utils"
 	"myBlockchain/wallet"
 	"net/http"
@@ -85,24 +83,6 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 		value32 := float32(value)
 
 		w.Header().Add("Content-Type", "application/json")
-
-		transaction := wallet.NewTransaction(privateKey, publicKey, *t.SenderBlockchainAddress, *t.RecipientBlockchainAddress, value32)
-		signature := transaction.GenerateSignature()
-		signatureStr := signature.String()
-
-		bt := &block.TransactionRequest{
-			SenderBlockchainAddress:    t.SenderBlockchainAddress,
-			RecipientBlockchainAddress: t.RecipientBlockchainAddress,
-			SenderPublicKey:            t.SenderPublicKey,
-			Value:                      &value32,
-			Signature:                  &signatureStr,
-		}
-
-		//以下エラーハンドリングは省略しているので後で付け足してもいいでしょう
-		m, _ := json.Marshal(bt)
-		buf := bytes.NewBuffer(m)
-
-		resp, _ := http.Post(ws.Gateway()+"/transaction", "application/json", buf)
 
 	default:
 		w.WriteHeader(http.StatusBadRequest)

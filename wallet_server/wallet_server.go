@@ -103,6 +103,11 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 		buf := bytes.NewBuffer(m)
 
 		resp, _ := http.Post(ws.Gateway()+"/transaction", "application/json", buf)
+		if resp.StatusCode == 201 {
+			io.WriteString(w, string(utils.JsonStatus("success")))
+			return
+		}
+		io.WriteString(w, string(utils.JsonStatus("fail")))
 
 	default:
 		w.WriteHeader(http.StatusBadRequest)

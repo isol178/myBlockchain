@@ -102,7 +102,7 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 		m, _ := json.Marshal(bt)
 		buf := bytes.NewBuffer(m)
 
-		resp, _ := http.Post(ws.Gateway()+"/transaction", "application/json", buf)
+		resp, _ := http.Post(ws.Gateway()+"/transactions", "application/json", buf)
 		if resp.StatusCode == 201 {
 			io.WriteString(w, string(utils.JsonStatus("success")))
 			return
@@ -118,6 +118,6 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 func (ws *WalletServer) Run() {
 	http.HandleFunc("/", ws.Index)
 	http.HandleFunc("/wallet", ws.Wallet)
-	http.HandleFunc("/transaction", ws.CreateTransaction)
+	http.HandleFunc("/transactions", ws.CreateTransaction)
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(int(ws.Port())), nil))
 }

@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"net"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
@@ -46,4 +47,29 @@ func FindNeighbor(myHost string, myPort uint16, startIp uint8, endIp uint8, star
 		}
 	}
 	return neighbors
+}
+
+func GetHost() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "127.0.0.1"
+	}
+	// fmt.Println(hostname)
+
+	address, err := net.LookupHost(hostname)
+	if err != nil {
+		return "127.0.0.1"
+	}
+
+	//講義にはなかったが自分のパソコンはlocal含む多くのIPが混ざって出てきたので、一般的な形のIPだけが出るようにした。
+	addr := make([]string, 0)
+	for i := 0; i < len(address); i++ {
+		if PATTERN.FindString(address[i]) != "" {
+			addr = append(addr, address[i])
+		}
+	}
+
+	// fmt.Println(address)
+	// fmt.Println(addr)
+	return addr[0]
 }

@@ -52,6 +52,18 @@ func (b *Block) Print() {
 	}
 }
 
+func (b *Block) PreviousHash()[32]byte {
+	return b.previousHash
+}
+
+func (b *Block) Nonce() int{
+	return b.nonce
+}
+
+func (b *Block) Transactions() []*Transaction {
+	return b.transactions
+}
+
 func (b *Block) Hash() [32]byte {
 	m, _ := json.Marshal(b)
 	//fmt.Println(string(m))
@@ -277,6 +289,23 @@ func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) float32 {
 		}
 	}
 	return totalAmount
+}
+
+func (bc *Blockchain) ValidChain(chain []*Block) bool {
+	preBlock := chain[0]
+	currentIndex := 1
+	for currentIndex < len(chain){
+		b := chain[currentIndex]
+		if b.PreviousHash() != preBlock.Hash() {
+			return false
+		}
+		if !bc.ValidProof(b.Nonce(), b.PreviousHash(), b.Transactions(), MINING_DIFFICULTY ){
+			return false
+		}
+		preBlock = b
+		currentIndex++
+	}
+	return true
 }
 
 type Transaction struct {

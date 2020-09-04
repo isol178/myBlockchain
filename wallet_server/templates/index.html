@@ -43,11 +43,11 @@
                               data: JSON.stringify(transaction_data),
                               success: function(response){
                                    console.info(response)
-                                   if ($.parseJSON(response).message === 'fail'){
-                                        alert('failed')
-                                        return
+                                   if (response.message == 'fail'){
+                                        alert('Send failed')
+                                   } else {
+                                        alert('Send success');
                                    }
-                                   alert('Send success');
                               },
                               error: function(response){
                                    console.error(response)
@@ -73,11 +73,11 @@
                          })
                     }
 
-                    $('#reload_wallet').click(function(){
-                         reload_amount();
-                    })
+                    // $('#reload_wallet').click(function(){
+                    //      reload_amount();
+                    // })
 
-                    //setInterval(reload_amount, 3000)
+                    setInterval(reload_amount, 3000)
                })
           </script>
      </head>
@@ -85,7 +85,7 @@
           <div>
                <h1>Wallet</h1>
                <div id="wallet_amount">0</div>
-               <button id="reload_wallet">Reload Wallet</button>
+               <!-- <button id="reload_wallet">Reload Wallet</button> -->
                <p>Public Key</p>
                <textarea id="public_key" rows="2" cols="100"></textarea>
                <p>Private Key</p>

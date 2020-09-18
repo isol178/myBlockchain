@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"regexp"
@@ -27,6 +28,7 @@ func IsFoundHost(host string, port uint16) bool {
 //192.168.0.10:5002
 //192.168.0.10:5003
 
+//IP address pattern matching
 var PATTERN = regexp.MustCompile(`((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?\.){3})(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)`)
 
 func FindNeighbor(myHost string, myPort uint16, startIp uint8, endIp uint8, startPort uint16, endPort uint16) []string {
@@ -34,7 +36,10 @@ func FindNeighbor(myHost string, myPort uint16, startIp uint8, endIp uint8, star
 
 	m := PATTERN.FindStringSubmatch(myHost)
 	prefixHost := m[1]
-	lastIp, _ := strconv.Atoi(m[len(m)-1])
+	lastIp, err := strconv.Atoi(m[len(m)-1])
+	if err != nil {
+		log.Printf("ERROR: %v", err)
+	}
 	neighbors := make([]string, 0)
 
 	for port := startPort; port <= endPort; port++ {
@@ -61,7 +66,6 @@ func GetHost() string {
 		return "127.0.0.1"
 	}
 
-	//講義にはなかったが自分のパソコンはlocal含む多くのIPが混ざって出てきたので、一般的な形のIPだけが出るようにした。
 	addr := make([]string, 0)
 	for i := 0; i < len(address); i++ {
 		if PATTERN.FindString(address[i]) != "" {

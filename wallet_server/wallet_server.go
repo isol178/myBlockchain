@@ -39,7 +39,10 @@ func (ws *WalletServer) Gateway() string {
 func (ws *WalletServer) Index(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case http.MethodGet:
-		t, _ := template.ParseFiles(path.Join(tempDir, "index.html"))
+		t, err := template.ParseFiles(path.Join(tempDir, "index.html"))
+		if err != nil {
+			log.Printf("ERROR: Parse HTML template: %v", err)
+		}
 		t.Execute(w, "")
 	default:
 		log.Printf("ERROR: Invalid HTTP Method")
@@ -51,7 +54,10 @@ func (ws *WalletServer) Wallet(w http.ResponseWriter, req *http.Request) {
 	case http.MethodPost:
 		w.Header().Add("Content-type", "application/json")
 		myWallet := wallet.NewWallet()
-		m, _ := myWallet.MarshalJSON()
+		m, err := myWallet.MarshalJSON()
+		if err != nil {
+			log.Printf("ERROR: Wallet Server: %v", err)
+		}
 		io.WriteString(w, string(m[:]))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
@@ -146,13 +152,16 @@ func (ws *WalletServer) WalletAmount(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			m, _ := json.Marshal(struct {
+			m, err := json.Marshal(struct {
 				Message string  `json:"message"`
 				Amount  float32 `json:"amount"`
 			}{
 				Message: "success",
 				Amount:  bar.Amount,
 			})
+			if err != nil {
+				log.Printf("ERROR: %v", err)
+			}
 			io.WriteString(w, string(m[:]))
 		} else {
 			io.WriteString(w, string(utils.JsonStatus("fail")))

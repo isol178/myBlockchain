@@ -52,6 +52,7 @@ func (bcs *BlockchainServer) GetChain(w http.ResponseWriter, req *http.Request) 
 
 func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
+	//Showing TransactionPool
 	case http.MethodGet:
 		w.Header().Add("Content-Type", "application/json")
 		bc := bcs.GetBlockchain()
@@ -65,6 +66,7 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 		})
 		io.WriteString(w, string(m[:]))
 
+	//Accepting transactions from wallet servers
 	case http.MethodPost:
 		decoder := json.NewDecoder(req.Body)
 		var t block.TransactionRequest
@@ -95,6 +97,7 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 		}
 		io.WriteString(w, string(m))
 
+	//Accepting transactions from other blockchain servers
 	case http.MethodPut:
 		decoder := json.NewDecoder(req.Body)
 		var t block.TransactionRequest
@@ -124,6 +127,7 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 		}
 		io.WriteString(w, string(m))
 
+	//Delete the contents in the TransactionPool
 	case http.MethodDelete:
 		bc := bcs.GetBlockchain()
 		bc.ClearTransactionPool()
@@ -178,7 +182,10 @@ func (bcs *BlockchainServer) Amount(w http.ResponseWriter, req *http.Request) {
 		amount := bcs.GetBlockchain().CalculateTotalAmount(blockchainAddress)
 
 		ar := &block.AmountResponse{amount}
-		m, _ := ar.MarshalJSON()
+		m, err := ar.MarshalJSON()
+		if err != nil {
+			log.Printf("ERROR: Calcuate amount API: %v", err)
+		}
 		w.Header().Add("Content-Type", "application/json")
 		io.WriteString(w, string(m[:]))
 	default:

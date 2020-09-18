@@ -1,12 +1,18 @@
 package utils
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"log"
+)
 
 func JsonStatus(message string) []byte {
-	m, _ := json.Marshal(struct {
+	m, err := json.Marshal(struct {
 		Message string `json:"message"`
 	}{
 		Message: message,
 	})
+	if err != nil {
+		log.Printf("ERROR: JSON Status: %v", err)
+	}
 	return m
 }

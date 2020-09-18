@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"log"
 	"myBlockchain/utils"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -110,9 +111,17 @@ func NewTransaction(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey,
 }
 
 func (t *Transaction) GenerateSignature() *utils.Signature {
-	m, _ := json.Marshal(t)
+	m, err := json.Marshal(t)
+	if err != nil {
+		log.Printf("ERROR: Generate Signature: %v", err)
+	}
+
 	h := sha256.Sum256([]byte(m))
-	r, s, _ := ecdsa.Sign(rand.Reader, t.senderPrivateKey, h[:])
+	r, s, err := ecdsa.Sign(rand.Reader, t.senderPrivateKey, h[:])
+	if err != nil {
+		log.Printf("ERROR: Generate Signature: %v", err)
+	}
+
 	return &utils.Signature{R: r, S: s}
 }
 

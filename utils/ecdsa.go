@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math/big"
 )
 
@@ -18,8 +19,14 @@ func (s *Signature) String() string {
 }
 
 func String2BigIntTuple(s string) (big.Int, big.Int) {
-	bx, _ := hex.DecodeString(s[:64])
-	by, _ := hex.DecodeString(s[64:])
+	bx, err := hex.DecodeString(s[:64])
+	if err != nil {
+		log.Printf("ERROR: %v", err)
+	}
+	by, err := hex.DecodeString(s[64:])
+	if err != nil {
+		log.Printf("ERROR: %v", err)
+	}
 
 	var bix big.Int
 	var biy big.Int
@@ -41,7 +48,10 @@ func PublicKeyFromString(s string) *ecdsa.PublicKey {
 }
 
 func PrivateKeyFromString(s string, publicKey *ecdsa.PublicKey) *ecdsa.PrivateKey {
-	b, _ := hex.DecodeString(s[:])
+	b, err := hex.DecodeString(s[:])
+	if err != nil {
+		log.Printf("ERROR: %v", err)
+	}
 	var bi big.Int
 	_ = bi.SetBytes(b)
 	return &ecdsa.PrivateKey{*publicKey, &bi}

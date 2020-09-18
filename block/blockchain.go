@@ -66,14 +66,17 @@ func (b *Block) Transactions() []*Transaction {
 }
 
 func (b *Block) Hash() [32]byte {
-	m, _ := json.Marshal(b)
+	m, err := json.Marshal(b)
+	if err != nil {
+		log.Printf("ERROR in method Hash(): %v", err)
+	}
 	//fmt.Println(string(m))
 	return sha256.Sum256([]byte(m))
 }
 
 func (b *Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		//Marshalを使う時は大文字で始まっていないと認識されないが、ネットワーク越しでは小文字で来るので表記の調整
+		//Marshalを使う時は大文字で始まっていないと認識されないが、ネットワークでは小文字で送受信するので表記の調整
 		Timestamp    int64          `json:"timestamp"`
 		Nonce        int            `json:"nonce"`
 		PreviousHash string         `json:"previous_hash"`
@@ -102,7 +105,11 @@ func (b *Block) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
 	}
-	ph, _ := hex.DecodeString(*v.PreviousHash)
+	ph, err := hex.DecodeString(*v.PreviousHash)
+	if err != nil {
+		log.Printf("ERROR: JSON decoding error with previousHash")
+		return err
+	}
 	copy(b.previousHash[:], ph[:32])
 	return nil
 }
@@ -214,26 +221,38 @@ func (bc *Blockchain) Print() {
 func (bc *Blockchain) CreateTransaction(sender string, recipient string, value float32,
 	senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
 	isTransacted := bc.AddTransaction(sender, recipient, value, senderPublicKey, s)
-	//Sync
+	//Sync with neighboring blockchain servers
 	if isTransacted {
 		for _, n := range bc.neighbors {
 			publickKeyStr := fmt.Sprintf("%064x%064x", senderPublicKey.X.Bytes(), senderPublicKey.Y.Bytes())
 			signatureStr := s.String()
 			bt := &TransactionRequest{SenderBlockchainAddress: &sender, RecipientBlockchainAddress: &recipient,
 				SenderPublicKey: &publickKeyStr, Value: &value, Signature: &signatureStr}
-			m, _ := json.Marshal(bt)
+			m, err := json.Marshal(bt)
+			if err != nil {
+				log.Printf("ERROR: JSON marshaling error: %v", err)
+			}
 			buf := bytes.NewBuffer(m)
 			endpoint := fmt.Sprintf("http://%s/transactions", n)
 			client := &http.Client{}
-			//エラーハンドリングは省略
-			req, _ := http.NewRequest("PUT", endpoint, buf)
-			resp, _ := client.Do(req)
+
+			req, err := http.NewRequest("PUT", endpoint, buf)
+			if err != nil {
+				log.Printf("ERROR: Failed to create HTTP request PUT: %v", err)
+			}
+
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Printf("ERROR: Failed to execute HTTP request: %v", err)
+			}
+
 			log.Printf("%v", resp)
 		}
 	}
 	return isTransacted
 }
 
+//Adding Transactions to TransactionPool
 func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32,
 	senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
 	t := NewTransaction(sender, recipient, value)
@@ -276,10 +295,12 @@ func (bc *Blockchain) CopyTransactionPool() []*Transaction {
 
 func (bc *Blockchain) ValidProof(nonce int, previousHash [32]byte, transactions []*Transaction, difficulty int) bool {
 	zeros := strings.Repeat("0", difficulty)
-	guessBlock := Block{timestamp: 0,
+	guessBlock := Block{
+		timestamp:    0,
 		nonce:        nonce,
 		previousHash: previousHash,
-		transactions: transactions}
+		transactions: transactions,
+	}
 	guessHash := fmt.Sprintf("%x", guessBlock.Hash())
 	return guessHash[:difficulty] == zeros
 }
@@ -289,12 +310,13 @@ func (bc *Blockchain) ProofOfWork() int {
 	previousHash := bc.LastBlock().Hash()
 	nonce := 0
 	for !bc.ValidProof(nonce, previousHash, transactions, MINING_DIFFICULTY) {
-		nonce += 1
+		nonce++
 	}
 	return nonce
 }
 
 func (bc *Blockchain) Mining() bool {
+	// limit mining action once at a time
 	bc.mux.Lock()
 	defer bc.mux.Unlock()
 
@@ -311,14 +333,23 @@ func (bc *Blockchain) Mining() bool {
 	for _, n := range bc.neighbors {
 		endpoint := fmt.Sprintf("http://%s/consensus", n)
 		client := &http.Client{}
-		req, _ := http.NewRequest("PUT", endpoint, nil)
-		resp, _ := client.Do(req)
+
+		req, err := http.NewRequest("PUT", endpoint, nil)
+		if err != nil {
+			log.Printf("ERROR: Failed to create HTTP request PUT in Mining: %v", err)
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("ERROR: Failed to execute request in Mining: %v", err)
+		}
 		log.Printf("%v", resp)
 	}
 
 	return true
 }
 
+//Repeat Mining Action after certain time
 func (bc *Blockchain) StartMining() {
 	bc.Mining()
 	_ = time.AfterFunc(time.Second*MINING_TIMER_SEC, bc.StartMining)
@@ -362,11 +393,17 @@ func (bc *Blockchain) ResolveConflicts() bool {
 	maxLength := len(bc.chain)
 	for _, n := range bc.neighbors {
 		endpoint := fmt.Sprintf("http://%s/chain", n)
-		resp, _ := http.Get(endpoint)
+		resp, err := http.Get(endpoint)
+		if err != nil {
+			log.Printf("ERROR: Failed to execute http request in ResolveConflicts: %v", err)
+		}
 		if resp.StatusCode == 200 {
 			var bcResp Blockchain
 			decoder := json.NewDecoder(resp.Body)
-			_ = decoder.Decode(&bcResp)
+			err = decoder.Decode(&bcResp)
+			if err != nil {
+				log.Printf("ERROR: JSON decoding: ResolveConflicts: %v", err)
+			}
 
 			chain := bcResp.Chain()
 
